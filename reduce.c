@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define DOUBLE_MARGIN 1e-16
+#define DOUBLE_MARGIN 1e-10
 #define double_equals(d, v) (((d) < ((v) + DOUBLE_MARGIN)) && ((d) > ((v) - DOUBLE_MARGIN)))
 
 void reduce_matrix(double** matrix, size_t x_size, size_t y_size) 
@@ -72,13 +72,46 @@ int main () {
 
     reduce_matrix(matrix, x_size, y_size);
 
-    for (size_t y = 0; y < y_size; y++) {
-            for (size_t x = 0; x < x_size; x++) {
-                printf("%6.3f ", matrix[y][x]);
-            }
-            putchar('\n');
-        }
     putchar('\n');
+
+    for (size_t y = 0; y < y_size; y++) {
+        for (size_t x = 0; x < x_size; x++) {
+            bool rational = false;
+
+            if (double_equals(matrix[y][x] - (long long) matrix[y][x], 0.0)) {
+                if ((long long) matrix[y][x] >= 0) putchar(' ');
+                printf("%lld ", (long long) matrix[y][x]);
+                rational = true;
+            }
+
+            else {
+                double denominator = 1 / matrix[y][x];
+                bool negative = false;
+                
+
+                if (denominator < 0) {
+                    negative = true;
+                    denominator *= -1;
+                }
+
+                for (size_t n = 1; n <= 1024; n++) {
+                    double d = denominator * n;
+
+                    if (double_equals(d - (long long) d, 0.0)) {
+                        putchar(negative ? '-' : ' ');
+
+                        printf("%zu/%lld ", n, (long long) d);
+                        rational = true;
+                        break;
+                    }
+                }
+
+            if (!rational) printf("%.2f ", matrix[y][x]);
+
+            }
+        }
+        putchar('\n');
+    }
 
     for (int i = 0; i < y_size; i++) {
         free(matrix[i]);
