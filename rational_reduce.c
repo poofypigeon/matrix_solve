@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <ctype.h>
+#include <limits.h>
 
 typedef struct {
     int32_t top;
@@ -80,6 +82,14 @@ fraction frac_subtract(fraction a, fraction b) {
 void reduce_matrix (fraction **matrix, size_t x_size, size_t y_size) {
     size_t rank = 0;
 
+    putchar('\n');
+    for (int y = 0; y < y_size; y++) {
+        for (int x = 0; x < x_size; x++) {
+            printf("%d/%d ", matrix[y][x].top, matrix[y][x].bottom);
+        }
+        putchar('\n');
+    }
+
     for (size_t col = 0; col < x_size; col++) {
         bool leading_entry_found = false;
 
@@ -131,6 +141,117 @@ void reduce_matrix (fraction **matrix, size_t x_size, size_t y_size) {
     }
 }
 
+int parse_int_32(int32_t *dest, char const digits[12], uint8_t size, bool negative) {
+    uint64_t parsed_digits = 0;
+    uint64_t multiplier = 1;
+
+    for (uint8_t i = 0; i < size; i++) {
+        parsed_digits += (digits[size - i - 1] - '0') * multiplier;
+        multiplier *= 10;
+    }
+
+    if (negative) {
+        parsed_digits = -parsed_digits;
+        if (parsed_digits < (int64_t) INT32_MIN) {
+            return -1;
+        }
+    }
+
+    else {
+        if (parsed_digits > (int64_t) INT32_MAX) {
+            return 1;
+        }
+    }
+
+    *dest = parsed_digits;
+    return 0;
+}
+
+
+int read_int_32 (char buffer[12], char *ch) {
+    int digits = 0;
+
+    if (!isnumber(*ch)) {
+        do { 
+            buffer[digits] = *ch; 
+            digits++;
+        } while (!isspace(*ch = getchar()) && digits < 11);
+        buffer[digits] = '\0';
+
+        return -digits;
+    }
+    
+    do {
+        buffer[digits] = *ch;
+        digits++;
+    } while (isnumber(*ch = getchar()) && digits < 11);
+    buffer[digits] = '\0';
+
+    if (isnumber(*ch)) {
+        return 0;
+    }
+
+    return digits;
+}
+
+void read_entry(fraction* entry) {
+    char numerator[11];
+    char denominator[11];
+    int8_t numerator_digits = 0;
+    int8_t denominator_digits = 0;
+
+    bool is_negative = false;
+    char ch;
+    do { ch = getchar(); } while (isspace(ch));
+
+    if (ch == '-') {
+        is_negative = true;
+        ch = getchar();
+    }
+
+    numerator_digits = read_int_32(numerator, &ch);
+
+    if (numerator_digits == 0) {
+        printf("A numerator is too large.\n");
+        exit(1);
+    }
+
+    if (numerator_digits < 0) {
+        printf("Invalid coefficient: '%s%s'.\n", numerator, (numerator_digits == -11) ? "..." : "");
+        exit(1);
+    }
+
+    if (parse_int_32(&(entry->top), numerator, numerator_digits, is_negative) != 0) {
+        printf("A numerator is too large.\n");
+        exit(1);
+    }
+
+    if (ch == '/') {
+        ch = getchar();
+        denominator_digits = read_int_32(denominator, &ch);
+
+        if (denominator_digits == 0) {
+            printf("A denominator is too large.\n");
+            exit(1);
+        }
+
+        if (denominator_digits < 0) {
+            printf("Invalid coefficient: '%s%s'.\n", denominator, (denominator_digits == -11) ? "..." : "");
+            exit(1);
+        }
+
+        if (parse_int_32(&(entry->bottom), denominator, denominator_digits, false) != 0) {
+            printf("A denominator is too large.\n");
+            exit(1);
+        }
+    } 
+    
+    else {
+        entry->bottom = 1;
+    }
+
+}
+
 int main() {
     size_t x_size, y_size;
 
@@ -149,8 +270,7 @@ int main() {
     printf("Entries:\n");
     for (size_t y = 0; y < y_size; y++) {
         for (size_t x = 0; x < x_size; x++) {
-            scanf("%d", &matrix[y][x].top);
-            matrix[y][x].bottom = 1;
+            read_entry(&matrix[y][x]);
         }
     }
 
@@ -166,4 +286,12 @@ int main() {
         }
         putchar('\n');
     }
+
+    for (size_t i = 0; i < y_size; i++) {
+        free(matrix[i]);
+    }
+
+    free(matrix);
+
+    return 0;
 }
